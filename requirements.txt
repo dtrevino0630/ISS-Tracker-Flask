@@ -1,0 +1,6 @@
+flask
+requests
+redis
+geopy
+pytest
+xmltodict
