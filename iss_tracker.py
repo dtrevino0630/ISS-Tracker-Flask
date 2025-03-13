@@ -21,7 +21,9 @@ REDIS_KEY = "iss_data"
 
 r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
 
-URL = 'https://nasa-public-data.s3.amazonaws.com/iss-coords/current/ISS_OEM/ISS.OEM_J2K_EPH.xml'
+# ISS Data Sources
+ISS_TRAJECTORY_URL = "https://nasa-public-data.s3.amazonaws.com/iss-coords/current/ISS_OEM/ISS.OEM_J2K_EPH.xml"
+ISS_NOW_URL = "http://api.open-notify.org/iss-now.json"
 
 def fetch_iss_data() -> List[Dict[str, Any]]:
     """
@@ -34,7 +36,7 @@ def fetch_iss_data() -> List[Dict[str, Any]]:
         time and state vectors (this is a global variable so it can be used throughout)
     """
     try:
-        response = requests.get(URL)
+        response = requests.get(ISS_TRAJECTORY_URL)
         response.raise_for_status()
         data = xmltodict.parse(response.text)
         state_vectors = data['ndm']['oem']['body']['segment']['data']['stateVector']
@@ -138,6 +140,16 @@ def find_closest_epoch(data: List[Dict[str, Any]], target_time: datetime) -> Dic
     closest_state = min(data, key=lambda state: abs((epoch_to_datetime(state['epoch']) - target_time).total_seconds()))
     return closest_state
 
+def get_geolocation(lat: float, lon: float) -> str:
+    """Return the approximate geographical location for given latitude & longitude."""
+    geolocator = Nominatim(user_agent="iss_tracker")
+    try:
+        location = geolocator.reverse((lat, lon), exactly_one=True)
+        return location.address if location else "Unknown Location"
+    except Exception as e:
+        logger.error(f"Error fetching geolocation: {e}")
+        return "Unknown Location"
+
 @app.route('/epochs', methods=['GET'])
 def get_epochs():
     """
@@ -172,17 +184,54 @@ def get_epoch_speed(epoch: str):
             return jsonify({'epoch': epoch, 'speed_km_s': speed})
     return jsonify({'error': 'Epoch not found'}), 404
 
+@app.route('/epochs/<epoch>/location', methods=['GET'])
+def get_epoch_location(epoch: str):
+    """Return latitude, longitude, altitude, and geoposition for a specific epoch."""
+    data = get_iss_data()
+    for state in data:
+        if state['epoch'] == epoch:
+            lat = state['y']
+            lon = state['x']
+            altitude = state['z']
+            geolocation = get_geolocation(lat, lon)
+            return jsonify({
+                'epoch': epoch,
+                'latitude': lat,
+                'longitude': lon,
+                'altitude_km': altitude,
+                'geoposition': geolocation
+            })
+    return jsonify({'error': 'Epoch not found'}), 404
+
 @app.route('/now', methods=['GET'])
 def get_current_state():
     """
     Return the state vector closest to the current time
     """
-    data = get_iss_data()
-    if not data:
-        return jsonify({'error': 'No ISS data available'}), 500
-    current_state = find_closest_epoch(data, datetime.utcnow())
-    speed = calculate_speed(current_state['x_dot'], current_state['y_dot'], current_state['z_dot'])
-    return jsonify({'current_state': current_state, 'speed_km_s': speed})
+    try:
+        response = requests.get(ISS_NOW_URL)
+        response.raise_for_status()
+        data = response.json()
+
+        position = data.get("iss_position", {})
+        timestamp = data.get("timestamp")
+
+        if "latitude" in position and "longitude" in position:
+            lat = float(position["latitude"])
+            lon = float(position["longitude"])
+            geolocation = get_geolocation(lat, lon)
+
+            return jsonify({
+                "timestamp": timestamp,
+                "latitude": lat,
+                "longitude": lon,
+                "geoposition": geolocation
+            })
+        else:
+            return jsonify({"error": "Invalid response format"}), 500
+    except requests.RequestException as e:
+        logger.error(f"Error fetching ISS position: {e}")
+        return jsonify({"error": "Failed to retrieve real-time ISS position"}), 500
 
 if __name__ == '__main__':
     # Ensure data is loaded into Redis on startup
