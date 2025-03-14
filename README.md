@@ -1,70 +1,51 @@
-# **ISS Tracker API**
+# **ISS Tracker Flask**
 
 ## **Overview**
-The **ISS Tracker API** is a Flask-based web service that retrieves and processes real-time **trajectory data** of the **International Space Station (ISS)** from NASA's public data source. It provides insights into the ISS's position, velocity, and speed, and includes functionality to find the closest epoch to a given time.
+The **ISS Tracker API** is a Flask-based web application designed to track and retrieve real-time trajectory data of the **International Space Station (ISS)**. The API fetches ISS state vector data from **NASA's public data source** and stores it in a **Redis database** for efficient querying. This application allows users to access ISS location details, compute speed, and retrieve real-time positional data.
 
-The API allows the user to:
-- Retrieve **entire ISS state vector data**.
-- Query **specific epochs** of ISS position and velocity.
-- Return **state variables** of any given epoch.
-- Compute **instantaneous speed** at any given epoch.
-- Get the ISS state **closest to the current time**.
+## Features
+- Fetches and stores ISS trajectory data in a **Redis Database**
+- Provides **RESTful API endpoints** to retrieve ISS position, velocity, and speed.
+- Implements **pagination** for querying large datasets.
+- Supports **real-time ISS tracking** via Open Notify API.
+- Containerized deployment using **Docker and Docker Compose**.
 
-**Data Source**: [NASA ISS Trajectory Data](https://spotthestation.nasa.gov/trajectory_data.cfm)
+## **Data Sources**
+- **NASA ISS OEM Data**: Provides historical and predicted ISS state vectors ([NASA Data](https://nasa-public-data.s3.amazonaws.com)).
+- **Open Notify API**: Supplies real-time ISS altitude and longitude ([Open Notify](http://api.open-notify.org/iss-now.json)).
 
 ---
 
-## Features
-- Fetches real-time ISS trajectory data from NASA's XML API.
-- Converts the **.XML file to JSON** for effective querying.
-- Provides multiple **API endpoints** to retrieve ISS state vectors.
-- Computes **instantaneous speed** using velocity components.
-- Supports **pagination** ('limit' & 'offset' for large datasets).
-- Includes **Docker File** for easy computation.
+## **Installation & Setup**
 
-## **Requirements**
-### **1. Dependencies**
-This script requires the following Python packages:
-- `requests` - To fetch ISS trajectory data from NASA's API.
-- `xmltodict` - To parse XML response data.
-- `math` - To perform speed calculations.
-- `logging` - To log messages for debugging and tracking.
-- `datetime` - For timestamp conversion and calculations.
-- `flask` - For running Flask API.
-- `pytest` (for unit testing)
+### **1. Prerequisites**
+Ensure you have the following installed:
+- **Python 3.9+**
+- **Docker & Docker Compose**
+- **Redis** (if running outside of Docker)
 
-Install dependencies using:
+### **2. Clone the Repository**
+```sh
+git clone https://github.com/dtrevino0630/ISS-Tracker-Flask.git
+cd ISS-Tracker-Flask
 ```
-pip install requests xmltodict math logging datetime flask pytest
-```
-This is used for the XML Data File
 
-## **Usage**
-### **Running via Docker**
-A `Dockerfile` is included to allow the Flask API to run in a containerized environment.
-#### **Building the Container (Docker Image)**
+### **3. Running the Application with Docker**
+Build and start the Flask and Redis containers:
 ```
-docker build --no-cache -t iss_tracker .
+docker-compose up -d
 ```
-Units Tests are run when the Container is Built (--no-cache ensures pytest output is shown)
-
-#### **Running the Flask API in a Container**
-Run the following Python script:
-```
-docker run -p 5000:5000 iss_tracker
-```
-Your Server should be running.
-
-Next, you can open a new terminal and log into where the files are. Then use the following Flask API Endpoints and Example Code to analyze data.
+The Flask API will be accessible at ```https://localhost:5000```
 
 ## **Flask API Endpoints**
-| **Routes**                      | **Method**  | **Description**                                        | **Example Code**                                                   |
-|---------------------------------|-------------|--------------------------------------------------------|--------------------------------------------------------------------|
-| `/epochs`                       | **GET**     | Returns the **entire dataset** of ISS state vectors.   | `curl https://localhost:5000/epochs`                               |
-| `/epochs?limit=int&offset=int`  | **GET**     | Returns **paginated results** (limit & offset).        | `curl https://localhost:5000/epochs?limits=5&offset=2`             |
-| `/epochs/<epoch>`               | **GET**     | Returns **state vector** for a given epoch.            | `curl https://localhost:5000/epochs/2025-045T12:00:00.000Z`        |
-| `/epochs/<epoch>/speed`         | **GET**     | Returns **instantaneous speed** at a given epoch.      | `curl https://localhost:5000/epochs/2025-045T12:00:00.000Z/speed`  |
-| `/now`                          | **GET**     | Returns **closest epoch to current time** with speed.  | `curl https://localhost:5000/now`                                  |
+| **Routes**                      | **Method**  | **Description**                                                                    | **Example Code**                                                      |
+|---------------------------------|-------------|------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
+| `/epochs`                       | **GET**     | Returns the **entire dataset** of ISS state vectors.                               | `curl https://localhost:5000/epochs`                                  |
+| `/epochs?limit=int&offset=int`  | **GET**     | Returns **paginated results** (limit & offset).                                    | `curl https://localhost:5000/epochs?limits=5&offset=2`                |
+| `/epochs/<epoch>`               | **GET**     | Returns **state vector** for a given epoch.                                        | `curl https://localhost:5000/epochs/2025-045T12:00:00.000Z`           |
+| `/epochs/<epoch>/speed`         | **GET**     | Returns **instantaneous speed** for a given epoch.                                 | `curl https://localhost:5000/epochs/2025-045T12:00:00.000Z/speed`     |
+| `/epochs/<epoch>/location`      | **GET**     | Returns **latitude, longitude, altitude, and geoposition** for a given epoch.      | `curl https://localhost:5000/epochs/2025-045T12:00:00.000Z/location`  |
+| `/now`                          | **GET**     | Returns **closest epoch to current time** with speed.                              | `curl https://localhost:5000/now`                                     |
 
 ## **Functions**
 ### `get_iss_data() -> List[Dict[str, Any]]`
@@ -83,7 +64,14 @@ Finds the state vector closest to a given timestamp.
 Computes the first and last epochs, average speed, and current speed.
 
 ## **Testing**
-The script includes a unit test file `test_iss_tracker.py`, which tests core functionalities using `pytest`.
+Unit tests are included to validate core functionalities. Run tests using:
+```
+docker exec -it iss_tracker_app pytest
+```
+or
+```
+pytest test_iss_tracker.py
+```
 
 ## **Example Output**
 The following display some sample requests and their respective output:
@@ -116,19 +104,27 @@ Output:
 ```
 
 ## **Cleaning Up Container**
-Once completed with your usage of the created container don't forget to stop and remove it.
-
-The following code lets you view the **Container ID** of Docker Images:
-`docker ps -a`
-
-Then you can stop a specific container by:
-`docker stop <Container ID>`
-
-Finally, once the container is stopped you can remove it with:
-`docker rm <Container ID>`
+To stop and remove containers, run:
+```
+docker-compose down
+```
+To remove all stopped containers:
+```
+docker system prune -a
+```
 
 ## Software Diagram
-This diagram illustrates the process of a NASA ISS Tracker analysis using Flask API, showing the relationships between the Docker container, which runs the API, and its dependencies. Inside the container, there is the API Code (iss_tracker.py) which manages the ISS data retrieval and data analysis. The user interacts with the system by retrieving API responses and test results.
+Below is a software diagram illustrating the key components and data flow of the ISS Tracker API:
+
+The system consists of several interconnected components:
+- **User Requests:** Clients send API requests to the Flask server.
+- **Flask API:** The central application logic that processes requests and retrieves ISS data.
+- **Redis Database:** Stores ISS trajectory data for fast access, reducing the need for frequent API calls.
+- **NASA & Open Notify APIs:** External data sources providing ISS trajectory and real-time location data.
+- **Docker Containers:** The Flask API and Redis database run inside the Docker containers for portability and easy deployment.
+
+When a user queries an endpoint, Flask first checks Redis for cached ISS data. If data is missing, Flask fetches new data from NASA's API, processes it, and stores it in
+Redis before returning it to the user. The ```/now``` endpoint directly queries Open Notify for real-time ISS location updates.
 ![Software Diagram](diagram.png)
 
 ### AI Assisted Development
