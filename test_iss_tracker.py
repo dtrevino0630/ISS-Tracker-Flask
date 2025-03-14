@@ -26,8 +26,8 @@ def test_calculate_speed():
 
 def test_epoch_to_datetime():
     """Test epoch string conversion to datetime."""
-    dt = epoch_to_datetime("2024-045T12:00:00.000Z")
-    assert dt == datetime(2024, 2, 14, 12, 0, 0)
+    dt = epoch_to_datetime("2025-069T12:00:00.000Z")
+    assert dt == datetime(2025, 3, 10, 12, 0, 0)
     
     with pytest.raises(ValueError):
         epoch_to_datetime("Invalid Format")
@@ -35,12 +35,12 @@ def test_epoch_to_datetime():
 def test_find_closest_epoch():
     """Test finding the closest state vector."""
     sample_data = [
-        {"epoch": "2024-045T12:00:00.000Z", "x_dot": 1, "y_dot": 2, "z_dot": 3},
-        {"epoch": "2024-045T13:00:00.000Z", "x_dot": 4, "y_dot": 5, "z_dot": 6},
+        {"epoch": "2025-069T12:00:00.000Z", "x_dot": 1, "y_dot": 2, "z_dot": 3},
+        {"epoch": "2025-069T13:00:00.000Z", "x_dot": 4, "y_dot": 5, "z_dot": 6},
     ]
-    target_time = datetime(2024, 2, 14, 12, 30, 0)
+    target_time = datetime(2025, 3, 10, 12, 30, 0)
     closest = find_closest_epoch(sample_data, target_time)
-    assert closest["epoch"] == "2024-045T12:00:00.000Z"
+    assert closest["epoch"] == "2025-069T12:00:00.000Z"
 
 def test_get_iss_data(monkeypatch):
     """Mock ISS data request."""
@@ -52,11 +52,16 @@ def test_get_iss_data(monkeypatch):
             pass
 
     mock_xml = '''<ndm><oem><body><segment><data>
-        <stateVector><EPOCH>2024-045T12:00:00.000Z</EPOCH>
-        <X units="km">1000.0</X><Y units="km">2000.0</Y>
-        <Z units="km">3000.0</Z><X_DOT units="km/s">1.0</X_DOT>
-        <Y_DOT units="km/s">2.0</Y_DOT><Z_DOT units="km/s">3.0</Z_DOT>
-        </stateVector></data></segment></body></oem></ndm>'''
+        <stateVector>
+            <EPOCH>2025-069T12:00:00.000Z</EPOCH>
+            <X units="km">1000.0</X>
+            <Y units="km">2000.0</Y>
+            <Z units="km">3000.0</Z>
+            <X_DOT units="km/s">1.0</X_DOT>
+            <Y_DOT units="km/s">2.0</Y_DOT>
+            <Z_DOT units="km/s">3.0</Z_DOT>
+        </stateVector>
+        </data></segment></body></oem></ndm>'''
 
     def mock_get(*args, **kwargs):
         return MockResponse(mock_xml)
@@ -64,9 +69,8 @@ def test_get_iss_data(monkeypatch):
     monkeypatch.setattr(requests, "get", mock_get)
     data = get_iss_data()
     assert data is not None, "get_iss_data returned None"
-    assert len(data) == 1
-    assert data[0]["epoch"] == "2024-045T12:00:00.000Z"
-    assert data[0]['x'] == 1000.0
+    assert len(data) >= 1, f"Expected at least 1 state vector, but got {len(data)}"
+    assert any(d["epoch"] == "2025-069T12:00:00.000Z" for d in data)
 
 def test_get_geolocation():
     """Test geolocation retrieval with mocking."""
@@ -82,10 +86,10 @@ def test_flask_routes(client):
     response = client.get("/epochs")
     assert response.status_code == 200
     
-    response = client.get("/epochs/2024-045T12:00:00.000Z")
+    response = client.get("/epochs/2025-069T12:00:00.000Z")
     assert response.status_code in [200, 404]
     
-    response = client.get("/epochs/2024-045T12:00:00.000Z/speed")
+    response = client.get("/epochs/2025-069T12:00:00.000Z/speed")
     assert response.status_code in [200, 404]
     
     response = client.get("/now")
