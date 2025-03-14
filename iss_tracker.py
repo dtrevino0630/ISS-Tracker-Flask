@@ -7,6 +7,8 @@ import redis
 import json
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
+from geopy.geocoders import Nominatim
+
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -14,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # Redis Configuration
 REDIS_HOST = "redis"
-REDIS_Port = 6379
+REDIS_PORT = 6379
 REDIS_KEY = "iss_data"
 
 # Connect to Redis
@@ -36,8 +38,13 @@ def fetch_iss_data() -> List[Dict[str, Any]]:
         time and state vectors (this is a global variable so it can be used throughout)
     """
     try:
+        logger.info("Fetching ISS data from NASA API...")
         response = requests.get(ISS_TRAJECTORY_URL)
+        logger.info(f"Response status code: {response.status_code}")
+
         response.raise_for_status()
+        logger.info("Successfully fetched ISS data.")
+
         data = xmltodict.parse(response.text)
         state_vectors = data['ndm']['oem']['body']['segment']['data']['stateVector']
         if not isinstance(state_vectors, list):
@@ -187,12 +194,24 @@ def get_epoch_speed(epoch: str):
 @app.route('/epochs/<epoch>/location', methods=['GET'])
 def get_epoch_location(epoch: str):
     """Return latitude, longitude, altitude, and geoposition for a specific epoch."""
+    logger.info(f"Fetching location data for epoch: {epoch}")
     data = get_iss_data()
+
+    if not data:
+        logger.error("No ISS data found in Redis!")
+        return jsonify({'error': 'No ISS data available'}), 500
+
     for state in data:
         if state['epoch'] == epoch:
             lat = state['y']
             lon = state['x']
             altitude = state['z']
+
+            # Check if latitude & longitude exist
+            if lat is None or lon is None or altitude is None:
+                logger.error(f"Missing data for epoch: {epoch}")
+                return jsonify({'error': f'Missing data for epoch {epoch}'}), 500
+
             geolocation = get_geolocation(lat, lon)
             return jsonify({
                 'epoch': epoch,
@@ -201,6 +220,7 @@ def get_epoch_location(epoch: str):
                 'altitude_km': altitude,
                 'geoposition': geolocation
             })
+    logger.error(f"Epoch not found: {epoch}")
     return jsonify({'error': 'Epoch not found'}), 404
 
 @app.route('/now', methods=['GET'])
@@ -235,5 +255,11 @@ def get_current_state():
 
 if __name__ == '__main__':
     # Ensure data is loaded into Redis on startup
-    get_iss_data()
+    logger.info("Starting ISS Tracker...")
+    
+    # Ensure data is loaded into Redis on startup
+    data = get_iss_data()
+    if not data:
+        logger.error("No data loaded into Redis on startup!")
+
     app.run(debug=True, host='0.0.0.0', port=5000)
