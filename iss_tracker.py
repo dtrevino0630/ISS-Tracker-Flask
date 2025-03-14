@@ -11,7 +11,7 @@ from geopy.geocoders import Nominatim
 
 
 app = Flask(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Redis Configuration
@@ -39,16 +39,21 @@ def fetch_iss_data() -> List[Dict[str, Any]]:
     """
     try:
         logger.info("Fetching ISS data from NASA API...")
-        response = requests.get(ISS_TRAJECTORY_URL)
+        response = requests.get(ISS_TRAJECTORY_URL, timeout=10)
         logger.info(f"Response status code: {response.status_code}")
 
         response.raise_for_status()
         logger.info("Successfully fetched ISS data.")
 
         data = xmltodict.parse(response.text)
-        state_vectors = data['ndm']['oem']['body']['segment']['data']['stateVector']
-        if not isinstance(state_vectors, list):
-            state_vectors = [state_vectors]
+        state_vectors = data.get('ndm', {}).get('oem', {}).get('body', {}).get('segment', {}).get('data', {}).get('stateVector', [])
+        #state_vectors = data['ndm']['oem']['body']['segment']['data']['stateVector']
+        #if not isinstance(state_vectors, list):
+        #    state_vectors = [state_vectors]
+
+        if not state_vectors:
+            logger.error("NASA API returned no state vectors!")
+            return []
 
         iss_data = [
             {
@@ -64,7 +69,7 @@ def fetch_iss_data() -> List[Dict[str, Any]]:
         ]
 
         # Store data in Redis
-        r.set(REDIS_KEY, json.dumps(iss_data))
+        r.set(REDIS_KEY, json.dumps(iss_data, indent=4))
         logger.info(f"Loaded {len(iss_data)} state vectors into Redis.")
         return iss_data
     except Exception as e:
@@ -229,7 +234,7 @@ def get_current_state():
     Return the state vector closest to the current time
     """
     try:
-        response = requests.get(ISS_NOW_URL)
+        response = requests.get(ISS_NOW_URL, timeout=10)
         response.raise_for_status()
         data = response.json()
 
@@ -246,7 +251,7 @@ def get_current_state():
                 "latitude": lat,
                 "longitude": lon,
                 "geoposition": geolocation
-            })
+            }), 200
         else:
             return jsonify({"error": "Invalid response format"}), 500
     except requests.RequestException as e:
@@ -255,7 +260,7 @@ def get_current_state():
 
 if __name__ == '__main__':
     # Ensure data is loaded into Redis on startup
-    logger.info("Starting ISS Tracker...")
+    logger.info("Starting ISS Tracker")
     
     # Ensure data is loaded into Redis on startup
     data = get_iss_data()
