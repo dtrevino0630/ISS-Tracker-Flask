@@ -33,9 +33,10 @@ cd ISS-Tracker-Flask
 ### **3. Running the Application with Docker**
 Build and start the Flask and Redis containers:
 ```
-docker-compose up -d
+docker-compose up --build
 ```
 The Flask API will be accessible at ```https://localhost:5000```
+You can open a new terminal and log into where the files are. Then use the following Flask API Endpoints and Example Code to analyze data.
 
 ## **Flask API Endpoints**
 | **Routes**                      | **Method**  | **Description**                                                                    | **Example Code**                                                      |
@@ -68,7 +69,7 @@ Unit tests are included to validate core functionalities. Run tests using:
 ```
 docker exec -it iss_tracker_app pytest
 ```
-or
+or locally:
 ```
 pytest test_iss_tracker.py
 ```
@@ -104,9 +105,13 @@ Output:
 ```
 
 ## **Cleaning Up Container**
-To stop and remove containers, run:
+To stop the current container, run:
 ```
-docker-compose down
+ctrl-C
+```
+To remove containers, run:
+```
+docker-compose down --volumes
 ```
 To remove all stopped containers:
 ```
