@@ -41,7 +41,7 @@ The Flask API will be accessible at ```https://localhost:5000```
 | **Routes**                      | **Method**  | **Description**                                                                    | **Example Code**                                                      |
 |---------------------------------|-------------|------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
 | `/epochs`                       | **GET**     | Returns the **entire dataset** of ISS state vectors.                               | `curl http://localhost:5000/epochs`                                  |
-| `/epochs?limit=int&offset=int`  | **GET**     | Returns **paginated results** (limit & offset).                                    | `curl http://localhost:5000/epochs?limits=5&offset=2`                |
+| `/epochs?limit=int&offset=int`  | **GET**     | Returns **paginated results** (limit & offset).                                    | `curl http://localhost:5000/epochs?limit=5&offset=2`                |
 | `/epochs/<epoch>`               | **GET**     | Returns **state vector** for a given epoch.                                        | `curl http://localhost:5000/epochs/2025-045T12:00:00.000Z`           |
 | `/epochs/<epoch>/speed`         | **GET**     | Returns **instantaneous speed** for a given epoch.                                 | `curl http://localhost:5000/epochs/2025-045T12:00:00.000Z/speed`     |
 | `/epochs/<epoch>/location`      | **GET**     | Returns **latitude, longitude, altitude, and geoposition** for a given epoch.      | `curl http://localhost:5000/epochs/2025-045T12:00:00.000Z/location`  |
