@@ -43,9 +43,9 @@ You can open a new terminal and log into where the files are. Then use the follo
 |---------------------------------|-------------|------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
 | `/epochs`                       | **GET**     | Returns the **entire dataset** of ISS state vectors.                               | `curl http://localhost:5000/epochs`                                  |
 | `/epochs?limit=int&offset=int`  | **GET**     | Returns **paginated results** (limit & offset).                                    | `curl http://localhost:5000/epochs?limit=5&offset=2`                |
-| `/epochs/<epoch>`               | **GET**     | Returns **state vector** for a given epoch.                                        | `curl http://localhost:5000/epochs/2025-045T12:00:00.000Z`           |
-| `/epochs/<epoch>/speed`         | **GET**     | Returns **instantaneous speed** for a given epoch.                                 | `curl http://localhost:5000/epochs/2025-045T12:00:00.000Z/speed`     |
-| `/epochs/<epoch>/location`      | **GET**     | Returns **latitude, longitude, altitude, and geoposition** for a given epoch.      | `curl http://localhost:5000/epochs/2025-045T12:00:00.000Z/location`  |
+| `/epochs/<epoch>`               | **GET**     | Returns **state vector** for a given epoch.                                        | `curl http://localhost:5000/epochs/2025-069T12:08:00.000Z`           |
+| `/epochs/<epoch>/speed`         | **GET**     | Returns **instantaneous speed** for a given epoch.                                 | `curl http://localhost:5000/epochs/2025-069T12:08:00.000Z/speed`     |
+| `/epochs/<epoch>/location`      | **GET**     | Returns **latitude, longitude, altitude, and geoposition** for a given epoch.      | `curl http://localhost:5000/epochs/2025-069T12:08:00.000Z/location`  |
 | `/now`                          | **GET**     | Returns **closest epoch to current time** with speed.                              | `curl http://localhost:5000/now`                                     |
 
 ## **Functions**
