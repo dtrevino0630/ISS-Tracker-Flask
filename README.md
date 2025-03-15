@@ -49,8 +49,11 @@ You can open a new terminal and log into where the files are. Then use the follo
 | `/now`                          | **GET**     | Returns **closest epoch to current time** with speed.                              | `curl http://localhost:5000/now`                                     |
 
 ## **Functions**
+### `fetch_iss_data() -> List[Dict[str, Any]]`
+Fetch ISS data from the NASA API and store it in Redis
+
 ### `get_iss_data() -> List[Dict[str, Any]]`
-Retrieves and parses ISS trajectory data from NASA's API.
+Retrieves and parses ISS trajectory data from Redis.
 
 ### `calculate_speed(x_dot: float, y_dot: float, z_dot: float) -> float`
 Computes the speed of the ISS using Cartesian velocity components.
@@ -60,6 +63,9 @@ Converts an ISS epoch timestamp to a Python `datetime` object.
 
 ### `find_closest_epoch(data: List[Dict[str, Any]], target_time: datetime) -> Dict[str, Any]`
 Finds the state vector closest to a given timestamp.
+
+### `get_geolocation(lat: float, lon: float) -> str`
+Returns the approximate geographical location for a given latitude and longitude
 
 ### `get_data_stats(data: List[Dict[str, Any]]) -> Tuple[Dict[str, Any], Dict[str, Any], float, float]`
 Computes the first and last epochs, average speed, and current speed.
